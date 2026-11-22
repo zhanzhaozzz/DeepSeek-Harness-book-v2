@@ -3,7 +3,7 @@ order: 3
 title: "第3章：Profile、Bundle 与启动"
 summary: "web、headless、sdk、sdk-minimal、acp 怎样从有序 bundle 叠出来；Plugin Manager 管当前 profile；Desktop 复用同一条启动路径。"
 status: published
-words: 1233
+words: 1242
 codeLines: 55
 minutes: 6
 updated: "2026-11-22"
@@ -101,7 +101,7 @@ YAML 也决定 HMR：base 打开仅配置的 `dsh-hmr`；headless、SDK 和 ACP 
 
 Application launch 一节规定：受支持的 Node 应用通过具名 `dsh` profile 启动，用 `dsh --profile <name>` 或 `dsh <name>`。`plugin` 是管理命令的名字；如果真有一个叫 plugin 的 profile，必须写 `--profile plugin`。TypeScript SDK 解析同版本的 `dsh` 依赖并选择 `sdk`。自定义插件组合仍然是「一个 profile 加上有序补丁文件」。
 
-同一节写明 Python SDK 跟随这套应用架构：运行时 wheel 把普通 `dsh` CLI 打成平台包，客户端默认以显式 Harness home 启动 `dsh --profile sdk`，最小示例选择 `sdk-minimal`。Python 暴露的是 profile 选择和有序补丁，持久的外部插件通过 `dsh plugin` 安装。Python 专章以后再写，这里只固定「它没有另一套私有启动器」这件事。
+同一节写明 Python SDK 跟随这套应用架构：运行时 wheel 把普通 `dsh` CLI 打成平台包，客户端默认以显式 Harness home 启动 `dsh --profile sdk`，最小示例选择 `sdk-minimal`。Python 暴露的是 profile 选择和有序补丁，持久的外部插件通过 `dsh plugin` 安装。第 14 章展开客户端怎样把这些参数交给子进程。这里先固定：它没有另一套私有启动器。
 
 ## Plugin Manager
 
@@ -137,7 +137,7 @@ export class PluginManager extends TypertRemoteService {
 The [Electron desktop application](../apps/desktop/README.md) ships its exact dsh production runtime in signed resources and owns the reserved `$DSH_HOME/profiles/desktop`. Shared helpers initialize profile files, reconcile bundles, and resolve installation and bundle dependencies without replacing pnpm-owned packages. Desktop and npm CLI share product data but keep packages, activation, and lockfiles separate.
 ```
 
-Electron 启动私有 Desktop Host（[`apps/desktop-host`](https://github.com/deepseek-ai/deepseek-harness/tree/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/apps/desktop-host)），Host 再调用共享的 CLI profile 运行器。发布相关代码在 `apps/desktop-publisher`。窗口加载打包好的 Web 资源，RPC 与流仍由 Web 拥有。Desktop 专章以后再写；读启动路径时只要记住：它占有保留 profile 名 `desktop`，并且仍然走 profile，而不是另一套进程内插件树。
+Electron 启动私有 Desktop Host（[`apps/desktop-host/src/index.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/apps/desktop-host/src/index.ts)），Host 再调用共享的 CLI profile 运行器。发布相关代码在 [`apps/desktop-publisher/README.md`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/apps/desktop-publisher/README.md)。窗口加载打包好的 Web 资源，RPC 与流仍由 Web 拥有。第 13 章展开这条启动路径。这里先记住：它占有保留 profile 名 `desktop`，并且仍然走 profile。
 
 ## 不变量
 

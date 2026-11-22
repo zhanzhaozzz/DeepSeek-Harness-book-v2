@@ -14,12 +14,26 @@ if (!sha || tag !== 'dsh-v0.2.3-alpha.2') {
   process.exit(1);
 }
 
+const modulesDir = join(root, 'src/content/modules');
+const requiredChapters = [
+  'ch13-desktop.md',
+  'ch14-python-sdk.md',
+  'ch15-mcp.md',
+  'ch16-teams.md',
+  'ch17-session-v4-migration.md',
+];
 const files = [
   join(root, 'README.md'),
-  ...readdirSync(join(root, 'src/content/modules'))
+  ...readdirSync(modulesDir)
     .filter((name) => name.endsWith('.md'))
-    .map((name) => join(root, 'src/content/modules', name)),
+    .map((name) => join(modulesDir, name)),
 ];
+for (const name of requiredChapters) {
+  if (!files.includes(join(modulesDir, name))) {
+    console.error(`missing follow-up chapter ${name}`);
+    process.exit(1);
+  }
+}
 
 const blobRe =
   /https:\/\/github\.com\/deepseek-ai\/deepseek-harness\/blob\/([0-9a-f]{40}|master|main)\/([A-Za-z0-9_./@+-]+)/g;
@@ -50,8 +64,8 @@ for (const file of files) {
   }
 }
 
-if (paths.size < 20) {
-  problems.push(`only ${paths.size} official paths cited; expected a full 12-chapter pin`);
+if (paths.size < 70) {
+  problems.push(`only ${paths.size} official paths cited; expected the 17-chapter pin`);
 }
 
 const checkout = process.env.DSH_ROOT;

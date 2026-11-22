@@ -3,7 +3,7 @@ order: 9
 title: "第9章：能力接缝 —— Definition、Provider、Consumer"
 summary: "一条接缝要同时有接口声明、实现和消费者。文件系统、子代理和模型工具都按这三种角色拆开，所以换一个提供者可以带动整片产品。"
 status: published
-words: 1007
+words: 1027
 codeLines: 12
 minutes: 5
 updated: "2026-11-22"
@@ -52,7 +52,7 @@ export class SubagentRuntime extends TypertRemoteService {
 
 构造函数 `super(ctx, 'subagents')`。默认深度 1，同时活着的可继续子代理默认 8。`packages/subagent/` 里的提供者包括进程内 fork、进程内 spawn、ACP、Claude Code、Codex、dsh SDK。模型面对的工具在 `tool-subagent` 与 `tool-subagent-control`。消费者依赖 `ctx.subagents` 这张注册表，不依赖某一个子进程实现。
 
-架构文档用一句话概括变化幅度：子代理提供者可以是一个全新的子 agent，也可以是把一轮委托到另一个产品里，接口仍是这一张。Agent Teams 在启用时为根 Session 加上任务策略和共享任务板；身份、消息、发现、打断和 inbox 等待仍属于普通子代理控制。Teams 专章以后再写。
+架构文档用一句话概括变化幅度：子代理提供者可以是一个全新的子 agent，也可以是把一轮委托到另一个产品里，接口仍是这一张。Agent Teams 在启用时为根 Session 加上任务策略和共享任务板；身份、消息、发现、打断和 inbox 等待仍属于普通子代理控制。第 16 章写这块任务板怎样挂进 `dsh-base`，以及新会话为什么默认关闭。
 
 ## 第 6、7 章已经是同一形状
 

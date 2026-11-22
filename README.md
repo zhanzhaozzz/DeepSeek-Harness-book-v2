@@ -48,7 +48,7 @@ DSH_ROOT=/path/to/deepseek-harness npm run check:paths
 
 `src/content/modules/chNN-*.md`，frontmatter：`order` / `title` / `summary` / `status` / `words` / `codeLines` / `minutes` / `updated`。
 
-十二章脊柱：
+十七章：
 
 1. 仓库地图
 2. Cordis 与插件
@@ -62,12 +62,13 @@ DSH_ROOT=/path/to/deepseek-harness npm run check:paths
 10. system-prompt 与 `agent.inject`
 11. 子代理、workflow 与 jobs
 12. 持久化、压缩与遥测
+13. Desktop：Electron 壳与 `desktop` profile
+14. Python SDK：显式 Harness home 与 `sdk` / `sdk-minimal`
+15. MCP：外部服务器登记到 `ctx.tools`
+16. Teams：随 `dsh-base` 挂载、新会话默认关闭
+17. Session V4 迁移：相邻链与写打开时发布后继
 
-写法：一句话定义 → 逐字摘录 → 不变量 → 下一章预告。
-
-## 以后再写的专章
-
-Desktop、Python SDK、MCP、Teams，以及把 Session V4 迁移单独成章。这些表面在第 1、3、12 章里只做到地图不错位：Session V4 的格式事实写在第 12 章。
+写法：一句话定义 → 逐字摘录 → 不变量 → 下一章预告。第 12 章写 V4 的句柄和版本门，第 17 章只写迁移和兼容。
 
 ## 部署备忘
 
