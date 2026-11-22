@@ -1,0 +1,53 @@
+---
+import { getCollection } from 'astro:content';
+import Base from '../layouts/Base.astro';
+import ModuleCard from '../components/ModuleCard.astro';
+
+const modules = (await getCollection('modules')).sort((a, b) => a.data.order - b.data.order);
+const firstPublished = modules.find((m) => m.data.status === 'published');
+---
+
+<Base>
+  <section class="hero">
+    <div class="hero-grid">
+      <div class="hero-left">
+        <p class="hero-eyebrow">源码精读笔记 · dsh-v0.2.3-alpha.2</p>
+        <h1 class="hero-title">DeepSeek Harness</h1>
+        <div class="hero-rule"></div>
+        <div class="hero-persona">
+          <p>如果你正在开发 AI Agent</p>
+          <p>想学习生产级 Harness 的设计</p>
+          <p>想搞懂「一切皆插件」是怎么落地的</p>
+          <p class="hero-persona-tail">—— 这本笔记是给你的</p>
+        </div>
+        <a class="hero-cta" href={`/modules/${firstPublished?.id ?? 'ch01-overview'}`}>开始阅读 →</a>
+      </div>
+      <aside class="hero-right">
+        <aside class="book-intro">
+          <div class="book-intro-heading">◆ 关于这一钉</div>
+          <p class="book-intro-desc">
+            DeepSeek Harness（dsh）是 DeepSeek 开源的 Agent Harness：一切皆插件，由 Cordis 驱动。上游仍是开发者预览，公共 API 是 pre-stable。本书跟随标签 dsh-v0.2.3-alpha.2（SHA 4b399c39a6d1479cd84ca591b4d7c88e24d38a96），代码摘录逐字来自该树。
+          </p>
+          <a
+            class="book-intro-link"
+            href="https://github.com/deepseek-ai/deepseek-harness/tree/4b399c39a6d1479cd84ca591b4d7c88e24d38a96"
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            → 打开这一钉的官方树
+          </a>
+        </aside>
+      </aside>
+    </div>
+  </section>
+
+  <section class="all-modules">
+    <h2 class="section-title">全部章节</h2>
+    <p class="section-note">
+      十二章沿同一条脊柱重写：一句话定义、逐字摘录、不变量、下一章预告。旧书对照的是 0.1.0-rc.6，只作为历史档案。Desktop、Python SDK、MCP、Teams 与单独的 Session V4 迁移专章留待后续。
+    </p>
+    <div class="modules-grid">
+      {modules.map((m) => <ModuleCard module={m} />)}
+    </div>
+  </section>
+</Base>
