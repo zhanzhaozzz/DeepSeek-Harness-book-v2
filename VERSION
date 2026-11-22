@@ -1,0 +1,11 @@
+# Tutorial pin. Excerpts and blob links follow this commit, not the default branch.
+repo: https://github.com/deepseek-ai/deepseek-harness
+defaultBranch: master
+tag: dsh-v0.2.3-alpha.2
+sha: 4b399c39a6d1479cd84ca591b4d7c88e24d38a96
+package: @deepseek-ai/dsh-root
+version: 0.2.3-alpha.2
+license: MIT
+node: ^24.22.3 || >=26.13.1
+packageManager: pnpm@11.28.5
+status: developer-preview

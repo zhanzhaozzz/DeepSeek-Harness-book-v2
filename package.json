@@ -1,0 +1,17 @@
+{
+  "name": "dsh-book",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "DeepSeek Harness 源码精读笔记，钉在官方标签 dsh-v0.2.3-alpha.2",
+  "scripts": {
+    "dev": "ASTRO_TELEMETRY_DISABLED=1 astro dev",
+    "build": "ASTRO_TELEMETRY_DISABLED=1 astro build",
+    "preview": "ASTRO_TELEMETRY_DISABLED=1 astro preview",
+    "meta": "node scripts/meta.mjs",
+    "check:paths": "node scripts/check-official-paths.mjs"
+  },
+  "dependencies": {
+    "astro": "^5.0.0"
+  }
+}
