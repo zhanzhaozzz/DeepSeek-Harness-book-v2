@@ -3,9 +3,9 @@ order: 17
 title: "第17章：Session V4 迁移"
 summary: "把旧会话迁到当前格式是一条从 0 到 4 的相邻链。写打开在旧文件旁边发布后继；同版本不迁移，更新的版本被拒绝。"
 status: published
-words: 1269
+words: 1354
 codeLines: 39
-minutes: 6
+minutes: 7
 updated: "2026-11-22"
 ---
 
@@ -13,7 +13,7 @@ updated: "2026-11-22"
 
 **一句话定义：Session 迁移是一条不许跳步的 `vN -> vN+1` 链；本钉的终点是 4，写打开在不改动源文件的前提下发布 `session.v4.jsonl`。**
 
-第 12 章已经写过句柄、`assertVersion`、压缩和遥测。这里不再重复那份存储契约，只看格式怎样从旧代际走到当前写入器，以及一份已经落盘的日志该怎样移动。
+第 12 章已经写过句柄、JSONL 打开路径上的版本拒绝、压缩和遥测。这里不再重复那份存储契约，只看格式怎样从旧代际走到当前写入器，以及一份已经落盘的日志该怎样移动。
 
 ## 写入器是 4，链必须凑齐
 
@@ -43,7 +43,7 @@ export function defineSessionFormatMigration(migration: SessionFormatMigration):
 
 `createSessionFormatChain` 再检查从 0 到当前版本的每一步都有且只有一条声明。缺一步抛 `SessionFormatUnsupportedMigrationError`，多出来的、不通向当前版本的边也会被拒绝。这个错误类型定义在 [`packages/session/session-format/src/error.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-format/src/error.ts)：可读、但已发布的源策略没有受支持迁移。
 
-规划时，比写入器更新的头同样被拒绝，而不是降级读取：
+`CompiledSessionFormatChain.plan` 在被调用到时，会拒绝比写入器更新的头，而不是降级读取。JSONL 打开路径在进入 `plan()` 之前就拒绝 `sourceVersion` 大于 4 的代际，原始文件留下：
 
 ```ts
   private plan(fromVersion: number): readonly SessionFormatMigration[] {
@@ -115,7 +115,7 @@ export const sessionFormatV3ToV4 = defineSessionFormatMigration({
 A read open uses that in-memory result without publishing a successor; a write open first encodes, verifies, and exclusively publishes the final version-named successor beside the unchanged source.
 ```
 
-用本钉的运行时对旧会话做一次写打开，就会在原文件旁边得到当前代际。源文件留着。只读打开只在内存里给出当前逻辑事件，不发布后继。头已经是 4 时，相邻链不跑，读者必须自己接受这一版里并存的历史写法。头大于 4 时，这条链拒绝解释，原始日志仍留在后端指出的位置。不要手改、重命名或删除已经提交的 `session.jsonl` / `session.vN.jsonl`。试验中的格式用一次性的、隔离的 Harness home，并从没有改过的历史输入重跑转换。
+用本钉的运行时对旧会话做一次写打开，就会在原文件旁边得到当前代际。源文件留着。只读打开只在内存里给出当前逻辑事件，不发布后继。头已经是 4 时，相邻链不跑，读者必须自己接受这一版里并存的历史写法。头大于 4 时，JSONL 的 `requireStoredLog` 先拒绝，不调用 `plan()`；原始日志留在后端指出的位置。`plan()` 若仍被调用到，会抛 `SessionFormatUnsupportedMigrationError`。不要手改、重命名或删除已经提交的 `session.jsonl` / `session.vN.jsonl`。试验中的格式用一次性的、隔离的 Harness home，并从没有改过的历史输入重跑转换。
 
 官方 [`docs/upgrade-guide/`](https://github.com/deepseek-ai/deepseek-harness/tree/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/docs/upgrade-guide) 记录各次产品发布里用户能感知的破坏性变更。格式整数本身的权威仍是 `SESSION_FORMAT_VERSION` 和 `docs/session-format-status.md`，不是某一篇升级指南的标题。
 
@@ -123,9 +123,9 @@ A read open uses that in-memory result without publishing a successor; a write o
 
 - 当前写入器是 4。迁移声明的 `toVersion` 必须等于 `fromVersion + 1`。从 0 到 4 的每一步都要有唯一的包。
 - 四步分别是 v0→v1 的身份与共享布局、v1→v2 的助手流、v2→v3 的系统消息与 PTC、v3→v4 的工具角色。v3→v4 的事件体要有显式的历史子会话事实。
-- 同版本绕过相邻迁移。比 4 新的存储版本被 `SessionFormatUnsupportedMigrationError` 拒绝。
+- 同版本绕过相邻迁移。比 4 新的 JSONL 代际由 `requireStoredLog` / `readGenerationHeader` 抛 `SessionFormatUnsupportedError` 并留下原文件。`plan()` 被调用到时才抛 `SessionFormatUnsupportedMigrationError`。
 - 写打开在源文件旁边发布最终代际。读打开不发布后继。已提交代际不改写。
-- 第 12 章的句柄和 `assertVersion` 面对的是已经恢复成当前逻辑格式的头。迁移发生在那扇门之前。
+- 第 12 章的 JSONL 打开路径以 `requireStoredLog` 为门：小于 4 进入 `loadStoredMigration`，大于 4 在读头时拒绝。句柄面对的是这次打开已经建立的通道，不是 `assertVersion`。
 
 ## 读完十七章
 
