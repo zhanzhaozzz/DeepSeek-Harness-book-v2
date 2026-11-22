@@ -3,7 +3,7 @@ order: 1
 title: "第1章：开篇 —— 钉住的仓库地图"
 summary: "DeepSeek Harness 在 dsh-v0.2.3-alpha.2 上是什么：开发者预览、55 个分组、核心 ctx 键，以及这一钉怎么跑起来。"
 status: published
-words: 1025
+words: 1010
 codeLines: 43
 minutes: 5
 updated: "2026-11-22"
@@ -125,14 +125,14 @@ packages/    @deepseek-ai/dsh-<pkg> workspaces at packages/<group>/<pkg>/
 npx @deepseek-ai/dsh web
 ```
 
-从源码跑时，README 写的是 `pnpm install`、`pnpm run build`、`pnpm dsh web`。Node 必须满足上面的 engines。随安装启动的 profile 在架构文档里写明是 `web`、`headless`、`sdk`、`sdk-minimal`、`acp`。Desktop 应用在 `apps/desktop`、`apps/desktop-host`、`apps/desktop-publisher`，第 3 章只交代它怎样复用同一套 profile 启动，不展开成专章。Python SDK 走同一套应用架构，细节同样留到以后。
+从源码跑时，README 写的是 `pnpm install`、`pnpm run build`、`pnpm dsh web`。Node 必须满足上面的 engines。随安装启动的 profile 在架构文档里写明是 `web`、`headless`、`sdk`、`sdk-minimal`、`acp`。Desktop 的壳、Host 和发布器在第 13 章。Python SDK 的显式 Harness home 与 `sdk` / `sdk-minimal` 在第 14 章。
 
 ## 不变量
 
 - 本书的事实边界是 SHA `4b399c39a6d1479cd84ca591b4d7c88e24d38a96`。默认分支 `master` 会继续走，笔记里的 blob 不跟着走。
 - 没有特权核心。架构文档的原话是：模型适配器、工具注册表、会话日志和 agent loop 本身都是插件。
 - 分组数以 `packages/` 目录和 `packages/README.md` 的表为准，本钉是 55。`AGENTS.md` 的 layout 是方位图。
-- 公共 API 保持 pre-stable。Session 数据另有发布格式义务，第 12 章写 Session V4。
+- 公共 API 保持 pre-stable。Session 数据另有发布格式义务，第 12 章写 Session V4 的持久化，第 17 章写相邻迁移。
 
 ## 下一章
 

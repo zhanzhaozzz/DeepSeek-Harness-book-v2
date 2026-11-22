@@ -3,7 +3,7 @@ order: 12
 title: "第12章：持久化、压缩与遥测"
 summary: "当前写入格式是 Session V4。句柄只追加，未来版本会被拒绝，历史代际靠相邻迁移变成当前逻辑事件。压缩替换 surface，遥测走独立的 OTel 通道。"
 status: published
-words: 1877
+words: 1895
 codeLines: 53
 minutes: 9
 updated: "2026-11-22"
@@ -28,7 +28,7 @@ latestReleasedVersion: 4
 evidenceTag: dsh-v0.2.0-rc.2
 ```
 
-文档写明：alpha、beta 或 release candidate 的产品发布就会建立已发布 Session 格式的义务。GitHub 的 prerelease 标记不会让已经写下的用户数据变成可丢弃的。证据标签是 `dsh-v0.2.0-rc.2`，不必是第一个带上该格式的发布。本钉的写入器与已发布格式同为 4，所以当前格式已经随产品发布过。以后若写入器大于发布记录，才表示新版本尚未记入发布。单独的迁移专章以后再写；这一章固定本钉的事实。
+文档写明：alpha、beta 或 release candidate 的产品发布就会建立已发布 Session 格式的义务。GitHub 的 prerelease 标记不会让已经写下的用户数据变成可丢弃的。证据标签是 `dsh-v0.2.0-rc.2`，不必是第一个带上该格式的发布。本钉的写入器与已发布格式同为 4，所以当前格式已经随产品发布过。以后若写入器大于发布记录，才表示新版本尚未记入发布。怎样把旧代际迁到 4，写在第 17 章。这一章固定句柄、版本门、压缩和遥测。
 
 [`docs/architecture.md`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/docs/architecture.md) 的 Session log 节描述读路径：只看头的 `stat` 和 `list` 扫描会话目录，选择数值最大的规范代际，翻译受支持的历史头，不加载事件，也不发布后继。`open` 选择同一代际，拒绝未来版本，或者把静态的相邻迁移链组合一次，再返回校验过的当前逻辑事件。读打开使用内存结果，不发布后继；写打开先编码、校验，并在不改动源文件的前提下独占发布最终的、带版本名的后继。已提交的代际路径永不改名、替换或删除。
 
@@ -143,6 +143,6 @@ export default class OTel extends Service {
 - `SessionHandle` 的 `write` 是单一修改者。关闭后的操作失败。格式不能解释时抛 `SessionFormatUnsupportedError`，这和日志损坏是两类错误。
 - 压缩替换 surface 上的一段并写入可重建的摘要。OTel 通道在事实发生之后独立送出，挂载 `ctx.otel` 本身不打开连接。
 
-## 读完这条脊柱
+## 下一章
 
-十二章沿着同一条线：Cordis 插件叠成 profile，默认循环把 turn 和 step 写进只追加日志，模型与工具是可换的接缝，提示词和 inject 把事实送进下一次请求，子代理、workflow 和 jobs 把工作送出这个循环，持久化把 V4 日志留下。Desktop、Python SDK、MCP、Teams，以及把 V4 迁移拆成操作手册，都还没有专章。升级到下一颗官方标签时，先读 `docs/upgrade-guide/`，再改对应章节里的摘录和 blob SHA。
+十二条脊柱到持久化为止：Cordis 插件叠成 profile，默认循环把 turn 和 step 写进只追加日志，模型与工具是可换的接缝，提示词和 inject 把事实送进下一次请求，子代理、workflow 和 jobs 把工作送出这个循环，V4 日志留在句柄后面。第 13 章离开这条进程内的脊柱，看 Electron 怎样用保留的 `desktop` profile 把同一棵 Web 应用树拉起来。Session 文件怎样从旧代际走到 v4，放在第 17 章，避免和第 12 章的句柄契约重复。
