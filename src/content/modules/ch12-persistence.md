@@ -3,9 +3,9 @@ order: 12
 title: "第12章：持久化、压缩与遥测"
 summary: "当前写入格式是 Session V4。句柄只追加，未来版本会被拒绝，历史代际靠相邻迁移变成当前逻辑事件。压缩替换 surface，遥测走独立的 OTel 通道。"
 status: published
-words: 1895
-codeLines: 53
-minutes: 9
+words: 2156
+codeLines: 81
+minutes: 11
 updated: "2026-11-22"
 ---
 
@@ -75,20 +75,68 @@ export interface SessionHandle extends AsyncDisposable {
 
 `write` 是唯一修改者，同时能读自己的日志。`read` 只观察，不取得所有权。`read` 不回退到这个句柄已经见过的更旧状态。写句柄上的 `append` 或 `flush` 一旦 resolve，之后在同一后端实例上开始的读都能看见至少那个前缀。`close()` 是唯一的拆卸，幂等且不可取消。
 
-版本门在 [`packages/session/session-persistence/src/storage-contract.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-persistence/src/storage-contract.ts)。注释说它拒绝的是还没有恢复成当前逻辑格式的头：
+JSONL 打开路径上的版本门在 [`packages/session/session-persistence-jsonl/src/index.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-persistence-jsonl/src/index.ts) 的 `JsonlSessionPersistence.requireStoredLog`。`sourceVersion` 小于 4 时进入 `loadStoredMigration`；后继只在写打开时发布。大于 4 时交给 `readGenerationHeader`，注释写明可读的未来头在那里被拒绝，不会变成当前逻辑会话：
 
 ```ts
-export function assertVersion(
-  meta: { readonly id: SessionId; readonly version: number },
-  location?: SessionLocation,
-): void {
-  if (meta.version !== SESSION_FORMAT_VERSION) {
-    throw unsupported(sessionFormatVersionRefusal(meta.id, meta.version), location)
-  }
+    if (selected.sourceVersion < SESSION_FORMAT_VERSION) {
+      const sourceRevision = fileRevision(await stat(selected.sourcePath, { bigint: true }))
+      signal?.throwIfAborted()
+      let preparation = this.migrationPreparations.get(id)
+      if (preparation === undefined
+        || preparation.sourcePath !== selected.sourcePath
+        || preparation.sourceRevision !== sourceRevision) {
+        const controller = new AbortController()
+        const promise = this.loadStoredMigration(id, selected, sourceRevision, controller.signal)
+```
+
+```ts
+    if (selected.sourceVersion > SESSION_FORMAT_VERSION) {
+      const header = await this.readGenerationHeader(selected, id, signal)
+      /* v8 ignore else -- a readable future header is rejected inside readGenerationHeader. */
+```
+
+`readGenerationHeader` 在头状态是 `unsupported` 且 `storedVersion` 大于当前写入器时，用 `sessionFormatVersionRefusal` 抛出 `SessionFormatUnsupportedError`：
+
+```ts
+    if (result.status === 'unsupported') {
+      const physicalId = String((value as { id?: unknown }).id)
+      let reason = result.reason
+      /* v8 ignore else -- released historical header migrations cannot refuse after physical decoding. */
+      if (result.storedVersion > SESSION_FORMAT_VERSION) {
+        reason = sessionFormatVersionRefusal(physicalId, result.storedVersion)
+      }
+      throw new SessionFormatUnsupportedError(
+        `${reason} (raw log: ${selected.sourcePath})`,
+        { kind: 'jsonl', path: selected.sourcePath },
+      )
+    }
+```
+
+同一包的 [`packages/session/session-persistence-jsonl/src/format.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-persistence-jsonl/src/format.ts) 在 `parseHeaderRecord` 里、校验当前头形状和解码事件行之前调用 `refuseForeignFormatVersion`。数字版本不是 `SESSION_FORMAT_VERSION` 就拒绝：
+
+```ts
+function refuseForeignFormatVersion(parsed: object): void {
+  const { version, id } = parsed as { version?: unknown; id?: unknown }
+  if (typeof version !== 'number' || version === SESSION_FORMAT_VERSION) return
+  throw new SessionFormatUnsupportedError(
+    sessionFormatVersionRefusal(typeof id === 'string' ? id : String(id), version),
+  )
 }
 ```
 
-拒绝类型是 [`packages/session/session-persistence/src/errors.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-persistence/src/errors.ts) 的 `SessionFormatUnsupportedError`。类注释区分它和损坏：日志是完整的，只是这个运行时不能忠实解释；原始日志仍留在后端指出的位置。未知且未标 `ignorable` 的事件类型同样走这扇门，避免静默跳过一条必需事件后重建出错误会话。
+两处拒绝文案都来自 [`packages/session/session-persistence/src/errors.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-persistence/src/errors.ts) 的 `sessionFormatVersionRefusal`。更新的日志要求升级 harness；更旧、又没有恢复成当前格式的日志说这个构建没有升级路径：
+
+```ts
+export function sessionFormatVersionRefusal(id: string, version: number): string {
+  return version > SESSION_FORMAT_VERSION
+    ? `session "${id}" uses log format v${version}, but this harness reads only v${SESSION_FORMAT_VERSION}: the log was written by a newer harness — upgrade the harness to open it`
+    : `session "${id}" uses log format v${version}, older than the supported v${SESSION_FORMAT_VERSION}, and this build ships no upgrade path for it`
+}
+```
+
+`SessionFormatUnsupportedError` 的类注释把这种拒绝和损坏分开：日志是完整的，只是这个运行时不能忠实解释；后端保留单文件时，原始日志仍留在 `location`。未知且未标 `ignorable` 的事件类型也使用这个错误类。
+
+[`packages/session/session-persistence/src/storage-contract.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-persistence/src/storage-contract.ts) 里的 `assertVersion` 同样在 `version !== SESSION_FORMAT_VERSION` 时拒绝，但本钉的 JSONL 打开路径不调用它。它的调用点在同目录的测试里。打开时拒绝未来版本的是上面的 `requireStoredLog` / `readGenerationHeader` / `refuseForeignFormatVersion`。
 
 轻量观察用 [`packages/session/session-persistence/src/revision.ts`](https://github.com/deepseek-ai/deepseek-harness/blob/4b399c39a6d1479cd84ca591b4d7c88e24d38a96/packages/session/session-persistence/src/revision.ts) 的 `SessionPersistenceRevision`：一个不透明标记，同时标识存储源和日志修订，不是会话内容本身。
 
@@ -139,7 +187,7 @@ export default class OTel extends Service {
 
 - 本钉写入器、定稿版本和已发布版本都是 4。发布证据标签是 `dsh-v0.2.0-rc.2`。预发布产品发布已经让这个格式承担兼容义务。
 - 历史代际保留原文件。写打开发布 `session.vN.jsonl` 后继，不改名、不覆盖、不删除已提交代际。
-- 迁移是相邻的 `vN -> vN+1`。本钉最后一步是 v3 到 v4。未来版本在进入当前逻辑会话之前被 `assertVersion` 拒绝。
+- 迁移是相邻的 `vN -> vN+1`。本钉最后一步是 v3 到 v4。JSONL 打开时，`sourceVersion` 小于 4 进入 `loadStoredMigration`，大于 4 在 `readGenerationHeader` 里被拒绝。文案是 `sessionFormatVersionRefusal`：更新的日志要升级 harness，未恢复的更旧日志说这个构建没有升级路径。
 - `SessionHandle` 的 `write` 是单一修改者。关闭后的操作失败。格式不能解释时抛 `SessionFormatUnsupportedError`，这和日志损坏是两类错误。
 - 压缩替换 surface 上的一段并写入可重建的摘要。OTel 通道在事实发生之后独立送出，挂载 `ctx.otel` 本身不打开连接。
 
